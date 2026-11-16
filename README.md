@@ -2,11 +2,6 @@
 
 **A wedding planning command center for my budget, vendors, guests and decisions.**
 
-I built WeddingOps around the parts of wedding planning that can get messy quickly, like keeping track of what has been spent, comparing vendors, remembering payment deadlines and understanding how a guest count change affects the whole budget.
-
-It includes a grounded planning assistant that only uses the structured wedding data in the app. Instead of giving generic advice, it can explain upcoming payments, budget pressure, missing vendor contracts and the cost impact of guest-list changes.
-
-This hits personal to home since i'm planning my wedding.
 
 ## What it helps with
 
