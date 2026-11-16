@@ -39,9 +39,9 @@ streamlit run streamlit_app.py
 |---|---|
 | `src/data.py` | Creates a realistic sample wedding with vendors, expenses, guests and seating constraints. |
 | `src/planner.py` | Calculates budget health, attendance scenarios, vendor scores and seating suggestions. |
-| `src/wedding_ops/assistant.py` | Provides grounded answers using the wedding data in the app. |
+| `src/assistant.py` | Provides grounded answers using the wedding data in the app. |
 | `streamlit_app.py` | Contains the interactive planning dashboard. |
-| `tests/` | Checks the budgeting, guest-list, seating, and assistant logic. |
+| `tests/test_planner.py` | Checks the budgeting, guest-list, seating, and assistant logic. |
 
 The data is synthetic so the project can be shared safely. It is meant to demonstrate a practical planning workflow, not to replace contracts, financial advice, or the couple’s final decisions.
 
