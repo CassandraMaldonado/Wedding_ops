@@ -1,14 +1,9 @@
-"""Sample wedding data used by the Streamlit dashboard."""
-
-# I use realistic sample data so every part of the dashboard can be explored
-# right away. It includes a budget, vendors, payment dates, guest details, and
+# I use sample data so every part of the dashboard can be explored right away. It includes a budget, vendors, payment dates, guest details, and
 # a few seating preferences and conflicts.
 
 from dataclasses import dataclass
 from datetime import date
-
 import pandas as pd
-
 
 @dataclass(frozen=True)
 class WeddingData:
