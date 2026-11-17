@@ -1,6 +1,4 @@
-"""Grounded planning assistant for common wedding questions."""
-
-# I designed this as a grounded assistant instead of a generic chatbot. It only
+# I designed this as an assistant instead of a generic chatbot. It only
 # answers from the budget, vendor, and guest data in the app, so the advice is
 # transparent and easy to check.
 
