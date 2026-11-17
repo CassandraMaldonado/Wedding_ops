@@ -1,5 +1,5 @@
-# I use sample data so every part of the dashboard can be explored right away. It includes a budget, vendors, payment dates, guest details, and
-# a few seating preferences and conflicts.
+# I use sample data so every part of the dashboard can be explored right away. 
+# It includes budget, vendors, payment dates, guest details and seating preferences.
 
 from dataclasses import dataclass
 from datetime import date
