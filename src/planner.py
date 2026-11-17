@@ -1,13 +1,9 @@
-"""Budget, vendor, guest, and seating calculations for WeddingOps."""
-
 # This is where I turn the wedding data into useful planning information. I
 # calculate budget pressure, upcoming payments, likely attendance, scenario
 # costs, vendor comparison scores, and a simple seating recommendation.
 
 from datetime import date, timedelta
-
 import pandas as pd
-
 from .data import WeddingData
 
 
