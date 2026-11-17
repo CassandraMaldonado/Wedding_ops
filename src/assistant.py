@@ -1,5 +1,4 @@
-# I designed this as an assistant instead of a generic chatbot. It only
-# answers from the budget, vendor, and guest data in the app, so the advice is
+# I designed this as an assistant, it only answers from the budget, vendor and guest data in the app, so the advice is
 # transparent and easy to check.
 
 from .data import WeddingData
