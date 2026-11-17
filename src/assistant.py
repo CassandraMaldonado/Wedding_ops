@@ -1,5 +1,4 @@
-# I designed this as an assistant, it only answers from the budget, vendor and guest data in the app, so the advice is
-# transparent and easy to check.
+# I designed this as an assistant. It only answers from the budget, vendor and guest data, so the advice is transparent and easy to check.
 
 from .data import WeddingData
 from .planner import attendance_forecast, budget_summary, guest_count_scenario, upcoming_payments
