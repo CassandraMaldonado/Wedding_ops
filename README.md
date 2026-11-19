@@ -13,6 +13,9 @@ It also includes a planning helper that uses the information already in the app.
 - Keep vendor quotes, deposits, contracts, contact details and payment dates in one place.
 - Flag upcoming payments and vendors with missing contracts.
 - Estimate attendance from RSVP patterns and show the expected range.
+- - Model the cost effect of changing the guest count.
+- Suggest a seating layout while respecting table size, preferences and conflict constraints.
+- Ask practical questions through the planning assistant like: “What is due this month?” or “Can we add 15 guests?”
 
 ## Run it locally
 
