@@ -1,5 +1,4 @@
-# This is where I turn the wedding data into useful planning information. I
-# calculate budget pressure, upcoming payments, likely attendance, scenario
+# I calculate budget pressure, upcoming payments, likely attendance, scenario
 # costs, vendor comparison scores, and a simple seating recommendation.
 
 from datetime import date, timedelta
