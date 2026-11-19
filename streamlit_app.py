@@ -1,10 +1,8 @@
-"""Interactive Streamlit dashboard for WeddingOps."""
-
+# Dashboard for WeddingOps.
 
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-
 from wedding_ops.assistant import answer
 from wedding_ops.data import sample_wedding
 from wedding_ops.planner import (
