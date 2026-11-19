@@ -1,5 +1,4 @@
-# I calculate budget pressure, upcoming payments, likely attendance, scenario
-# costs, vendor comparison scores, and a simple seating recommendation.
+# I calculate budget pressure, upcoming payments, likely attendance, scenario costs, vendor comparison scores and seating recommendations.
 
 from datetime import date, timedelta
 import pandas as pd
