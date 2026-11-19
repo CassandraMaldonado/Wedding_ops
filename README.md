@@ -9,6 +9,11 @@ It also includes a planning helper that uses the information already in the app.
 
 ## What it helps with
 
+ Compare the planned budget with actual spending and committed vendor costs.
+- Keep vendor quotes, deposits, contracts, contact details and payment dates in one place.
+- Flag upcoming payments and vendors with missing contracts.
+- Estimate attendance from RSVP patterns and show the expected range.
+
 ## Run it locally
 
 ```bash
