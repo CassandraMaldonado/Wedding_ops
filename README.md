@@ -30,8 +30,8 @@ streamlit run streamlit_app.py
 
 | Location | What I use it for |
 |---|---|
-| `src/data.py` | Creates a realistic sample wedding with vendors, expenses, guests and seating constraints. |
-| `src/planner.py` | Calculates budget health, attendance scenarios, vendor scores and seating suggestions. |
-| `src/assistant.py` | Provides grounded answers using the wedding data in the app. |
+| `wedding_ops/data.py` | Creates a realistic sample wedding with vendors, expenses, guests and seating constraints. |
+| `wedding_ops/planner.py` | Calculates budget health, attendance scenarios, vendor scores and seating suggestions. |
+| `wedding_ops/assistant.py` | Provides grounded answers using the wedding data in the app. |
 | `streamlit_app.py` | The planning dashboard. |
 | `tests/test_planner.py` | Checks the budgeting, guest list, seating and assistant logic. |

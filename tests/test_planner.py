@@ -1,5 +1,7 @@
+from datetime import date
+
 from wedding_ops.assistant import answer
-from wedding_ops.data import sample_wedding
+from wedding_ops.data import WeddingData, load_wedding, sample_wedding, save_wedding
 from wedding_ops.planner import (
     attendance_forecast,
     budget_summary,
@@ -37,3 +39,45 @@ def test_grounded_assistant_answers_common_questions():
     assert "upcoming payments" in answer("What is due this month?", data).lower()
     assert "budget" in answer("How much budget is left?", data).lower()
 
+
+def test_wedding_profile_round_trip(tmp_path):
+    data = sample_wedding()
+    data = WeddingData(
+        65000,
+        date(2027, 6, 12),
+        data.vendors,
+        data.guests,
+        data.categories,
+        couple_name="Jamie & Morgan",
+        venue="The Glass Garden",
+    )
+
+    profile_id = save_wedding(data, "Jamie Morgan", tmp_path)
+    restored = load_wedding(profile_id, tmp_path)
+
+    assert restored.budget == 65000
+    assert restored.venue == "The Glass Garden"
+    assert restored.couple_name == "Jamie & Morgan"
+    assert restored.wedding_date.isoformat() == "2027-06-12"
+
+
+def test_committed_and_expected_guest_overrides(tmp_path):
+    data = sample_wedding()
+    data = WeddingData(
+        70000,
+        date(2027, 8, 14),
+        data.vendors,
+        data.guests,
+        data.categories,
+        committed=52000,
+        expected_guests=145,
+    )
+
+    profile_id = save_wedding(data, "Editable Wedding", tmp_path)
+    restored = load_wedding(profile_id, tmp_path)
+
+    assert budget_summary(restored)["committed"] == 52000
+    assert (
+        attendance_forecast(restored.guests, restored.expected_guests)["expected"]
+        == 145
+    )
