@@ -9,9 +9,10 @@ from .data import WeddingData
 
 def budget_summary(data: WeddingData) -> dict:
     planned = float(data.categories.planned.sum())
+    overridden_committed = getattr(data, "committed", None)
     committed = (
-        float(data.committed)
-        if data.committed is not None
+        float(overridden_committed)
+        if overridden_committed is not None
         else float(data.categories.committed.sum())
     )
     paid = float(data.vendors.paid.sum())
@@ -61,7 +62,7 @@ def attendance_forecast(
 
 
 def guest_count_scenario(data: WeddingData, additional_guests: int) -> dict:
-    forecast = attendance_forecast(data.guests, data.expected_guests)
+    forecast = attendance_forecast(data.guests, getattr(data, "expected_guests", None))
     per_guest = {"catering": 92, "bar": 31, "rentals": 18, "stationery": 7}
     impact = {name: amount * additional_guests for name, amount in per_guest.items()}
     return {

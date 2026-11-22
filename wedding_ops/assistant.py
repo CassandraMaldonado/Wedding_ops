@@ -25,7 +25,9 @@ def answer(question: str, data: WeddingData) -> str:
         scenario = guest_count_scenario(data, 15)
         return f"Adding 15 guests would add about ${scenario['total']:,.0f}, mostly from catering, bar, rentals, and stationery. Your expected count would become {scenario['new_expected_count']}."
     if any(word in text for word in ("guest", "attendance", "rsvp")):
-        forecast = attendance_forecast(data.guests, data.expected_guests)
+        forecast = attendance_forecast(
+            data.guests, getattr(data, "expected_guests", None)
+        )
         return f"You currently have {forecast['confirmed']} confirmed guests. Based on pending RSVPs, I would plan for about {forecast['expected']} guests, with a likely range of {forecast['low']} to {forecast['high']}."
     if any(word in text for word in ("budget", "afford", "remaining")):
         return f"You have ${summary['remaining']:,.0f} left in the budget after current committed costs. The plan has ${summary['unallocated']:,.0f} not yet assigned to a category, so I would protect that before adding optional upgrades."

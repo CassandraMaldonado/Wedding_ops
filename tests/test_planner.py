@@ -1,4 +1,5 @@
 from datetime import date
+from types import SimpleNamespace
 
 from wedding_ops.assistant import answer
 from wedding_ops.data import WeddingData, load_wedding, sample_wedding, save_wedding
@@ -81,3 +82,16 @@ def test_committed_and_expected_guest_overrides(tmp_path):
         attendance_forecast(restored.guests, restored.expected_guests)["expected"]
         == 145
     )
+
+
+def test_old_wedding_data_shape_is_supported():
+    data = sample_wedding()
+    legacy_data = SimpleNamespace(
+        budget=data.budget,
+        wedding_date=data.wedding_date,
+        vendors=data.vendors,
+        guests=data.guests,
+        categories=data.categories,
+    )
+
+    assert budget_summary(legacy_data)["committed"] == data.categories.committed.sum()

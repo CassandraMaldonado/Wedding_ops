@@ -41,7 +41,7 @@ if st.session_state.active_profile == "demo":
 else:
     data = load_wedding(st.session_state.active_profile)
 budget = budget_summary(data)
-attendance = attendance_forecast(data.guests, data.expected_guests)
+attendance = attendance_forecast(data.guests, getattr(data, "expected_guests", None))
 
 
 def save_current_wedding(updated_data: WeddingData) -> None:
@@ -89,9 +89,10 @@ with st.sidebar:
             value=float(data.budget),
             key=f"budget_{st.session_state.active_profile}",
         )
+        overridden_committed = getattr(data, "committed", None)
         committed_default = (
-            float(data.committed)
-            if data.committed is not None
+            float(overridden_committed)
+            if overridden_committed is not None
             else float(budget["committed"])
         )
         committed = st.number_input(
@@ -106,8 +107,8 @@ with st.sidebar:
             min_value=0,
             step=1,
             value=int(
-                data.expected_guests
-                if data.expected_guests is not None
+                getattr(data, "expected_guests", None)
+                if getattr(data, "expected_guests", None) is not None
                 else attendance["expected"]
             ),
             key=f"expected_guests_{st.session_state.active_profile}",
@@ -249,8 +250,8 @@ elif page == "Budget & payments":
             categories,
             data.couple_name,
             data.venue,
-            data.committed,
-            data.expected_guests,
+            getattr(data, "committed", None),
+            getattr(data, "expected_guests", None),
         )
         save_current_wedding(updated)
         st.rerun()
@@ -306,8 +307,8 @@ elif page == "Vendors":
             data.categories,
             data.couple_name,
             data.venue,
-            data.committed,
-            data.expected_guests,
+            getattr(data, "committed", None),
+            getattr(data, "expected_guests", None),
         )
         save_current_wedding(updated)
         st.rerun()
@@ -367,8 +368,8 @@ elif page == "Guests & seating":
             data.categories,
             data.couple_name,
             data.venue,
-            data.committed,
-            data.expected_guests,
+            getattr(data, "committed", None),
+            getattr(data, "expected_guests", None),
         )
         save_current_wedding(updated)
         st.rerun()
