@@ -21,6 +21,7 @@ class WeddingData:
     venue: str = "Golden Hour Venue"
     committed: float | None = None
     expected_guests: int | None = None
+    paid: float | None = None
 
 
 def sample_wedding() -> WeddingData:
@@ -254,6 +255,7 @@ def save_wedding(data: WeddingData, name: str, directory: Path | None = None) ->
         "budget": data.budget,
         "committed": getattr(data, "committed", None),
         "expected_guests": getattr(data, "expected_guests", None),
+        "paid": getattr(data, "paid", None),
         "wedding_date": data.wedding_date.isoformat(),
         "vendors": data.vendors.to_dict(orient="records"),
         "guests": data.guests.to_dict(orient="records"),
@@ -278,4 +280,5 @@ def load_wedding(profile_name: str, directory: Path | None = None) -> WeddingDat
         venue=payload.get("venue", "Venue to be confirmed"),
         committed=payload.get("committed"),
         expected_guests=payload.get("expected_guests"),
+        paid=payload.get("paid"),
     )
