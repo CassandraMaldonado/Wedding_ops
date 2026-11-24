@@ -15,7 +15,12 @@ def budget_summary(data: WeddingData) -> dict:
         if overridden_committed is not None
         else float(data.categories.committed.sum())
     )
-    paid = float(data.vendors.paid.sum())
+    overridden_paid = getattr(data, "paid", None)
+    paid = (
+        float(overridden_paid)
+        if overridden_paid is not None
+        else float(data.vendors.paid.sum())
+    )
     return {
         "budget": data.budget,
         "planned": planned,
