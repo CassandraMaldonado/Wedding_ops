@@ -15,3 +15,11 @@ def test_budget_summary_is_consistent():
     summary = budget_summary(sample_wedding())
     assert summary["remaining"] == summary["budget"] - summary["committed"]
     assert summary["paid"] < summary["committed"]
+
+def test_attendance_and_guest_scenario_are_reasonable():
+    data = sample_wedding()
+    forecast = attendance_forecast(data.guests)
+    scenario = guest_count_scenario(data, 15)
+    assert forecast["low"] <= forecast["expected"] <= forecast["high"]
+    assert scenario["total"] > 0
+    assert scenario["new_expected_count"] == forecast["expected"] + 15
