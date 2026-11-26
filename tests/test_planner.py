@@ -10,3 +10,8 @@ from wedding_ops.planner import (
     seating_plan,
     vendor_scores,
 )
+
+def test_budget_summary_is_consistent():
+    summary = budget_summary(sample_wedding())
+    assert summary["remaining"] == summary["budget"] - summary["committed"]
+    assert summary["paid"] < summary["committed"]
