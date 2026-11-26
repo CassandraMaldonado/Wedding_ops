@@ -23,3 +23,10 @@ def test_attendance_and_guest_scenario_are_reasonable():
     assert forecast["low"] <= forecast["expected"] <= forecast["high"]
     assert scenario["total"] > 0
     assert scenario["new_expected_count"] == forecast["expected"] + 15
+
+def test_vendor_scoring_and_seating_plan():
+    data = sample_wedding()
+    scored = vendor_scores(data)
+    tables = seating_plan(data.guests)
+    assert scored.value_score.between(0, 100).all()
+    assert tables.seats_used.max() <= 8
