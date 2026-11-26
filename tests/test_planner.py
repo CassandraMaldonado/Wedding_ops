@@ -10,4 +10,3 @@ from wedding_ops.planner import (
     seating_plan,
     vendor_scores,
 )
-
