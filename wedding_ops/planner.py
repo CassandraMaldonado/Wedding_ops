@@ -32,10 +32,11 @@ def budget_summary(data: WeddingData) -> dict:
 
 
 def upcoming_payments(
-    data: WeddingData, days: int = 45, today: date = date(2026, 5, 15)
+    data: WeddingData, days: int = 45, today: date | None = None
 ) -> pd.DataFrame:
+    today = today or date.today()
     vendors = data.vendors.copy()
-    vendors["next_payment"] = pd.to_datetime(vendors.next_payment).dt.date
+    vendors["next_payment"] = pd.to_datetime(vendors.next_payment, errors="coerce").dt.date
     mask = (vendors.next_payment >= today) & (
         vendors.next_payment <= today + timedelta(days=days)
     )
@@ -80,7 +81,7 @@ def guest_count_scenario(data: WeddingData, additional_guests: int) -> dict:
 
 def vendor_scores(data: WeddingData) -> pd.DataFrame:
     result = data.vendors.copy()
-    max_quote = result.quote.max()
+    max_quote = result.quote.max() or 1
     result["value_score"] = (
         (1 - result.quote / max_quote) * 0.35
         + (result.rating / 5) * 0.35
