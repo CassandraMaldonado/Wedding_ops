@@ -1,5 +1,7 @@
 # Dashboard for WeddingOps.
 
+from dataclasses import replace
+
 import pandas as pd
 import plotly.express as px
 import streamlit as st
@@ -60,6 +62,7 @@ with st.sidebar:
     selected_profile = st.selectbox(
         "Wedding profile",
         profile_options,
+        index=profile_options.index(st.session_state.active_profile) if st.session_state.active_profile in profile_options else 0,
         format_func=lambda name: "Demo wedding" if name == "demo" else name,
     )
     if selected_profile != st.session_state.active_profile:
@@ -243,34 +246,49 @@ if page == "Overview":
 elif page == "Budget & payments":
     st.markdown('<p class="eyebrow">BUDGET & PAYMENTS</p>', unsafe_allow_html=True)
     st.title("See what is committed—and what is still flexible.")
+    st.caption("Edit the total budget and category amounts, then save. Committed amounts here are tracked by category.")
+    total_budget = st.number_input("Total wedding budget", min_value=0.0, value=float(data.budget), step=100.0, key=f"total_budget_{st.session_state.active_profile}")
     categories = st.data_editor(
-        data.categories.assign(remaining=lambda frame: frame.planned - frame.committed),
-        hide_index=True,
-        use_container_width=True,
-        num_rows="dynamic",
+        data.categories[["category", "planned", "committed"]],
+        hide_index=True, use_container_width=True, num_rows="dynamic",
         column_config={
-            "planned": st.column_config.NumberColumn("Planned", format="$%d"),
-            "committed": st.column_config.NumberColumn("Committed", format="$%d"),
-            "remaining": st.column_config.NumberColumn("Still flexible", format="$%d"),
-        },
-        key=f"categories_{st.session_state.active_profile}",
+            "category": st.column_config.TextColumn("Category", required=True),
+            "planned": st.column_config.NumberColumn("Planned ($)", min_value=0, required=True, format="$%.2f"),
+            "committed": st.column_config.NumberColumn("Committed ($)", min_value=0, required=True, format="$%.2f"),
+        }, key=f"categories_{st.session_state.active_profile}",
     )
-    if st.button("Save budget changes"):
-        categories = categories.drop(columns=["remaining"], errors="ignore")
-        updated = WeddingData(
-            data.budget,
-            data.wedding_date,
-            data.vendors,
-            data.guests,
-            categories,
-            data.couple_name,
-            data.venue,
-            float(categories.committed.sum()),
-            getattr(data, "expected_guests", None),
-            getattr(data, "paid", None),
-        )
-        save_current_wedding(updated)
-        st.rerun()
+    if st.button("Save budget changes", type="primary"):
+        if categories.empty or categories[["category", "planned", "committed"]].isna().any().any() or categories.category.astype(str).str.strip().eq("").any():
+            st.error("Add at least one category and fill in its name, planned amount, and committed amount.")
+        else:
+            save_current_wedding(replace(data, budget=float(total_budget), categories=categories, committed=None))
+            st.rerun()
+    st.caption("Still flexible by category = planned amount minus committed amount.")
+    st.dataframe(data.categories.assign(**{"Still flexible": data.categories.planned - data.categories.committed})[["category", "Still flexible"]], hide_index=True, use_container_width=True, column_config={"Still flexible": st.column_config.NumberColumn(format="$%.2f")})
+    st.subheader("Payments")
+    st.caption("Update amounts paid and the next payment date here. Remaining balance is the total committed minus paid; it is not necessarily the amount due on that date.")
+    payments_edit = st.data_editor(
+        data.vendors[["vendor", "committed", "paid", "next_payment"]],
+        hide_index=True, use_container_width=True,
+        column_config={
+            "vendor": st.column_config.TextColumn("Vendor", disabled=True),
+            "committed": st.column_config.NumberColumn("Committed ($)", min_value=0, required=True, format="$%.2f"),
+            "paid": st.column_config.NumberColumn("Paid ($)", min_value=0, required=True, format="$%.2f"),
+            "next_payment": st.column_config.TextColumn("Next payment date (YYYY-MM-DD)", help="Leave blank if no date is set."),
+        }, key=f"payments_{st.session_state.active_profile}",
+    )
+    if st.button("Save payment changes"):
+        dates = payments_edit.next_payment.fillna("").astype(str).str.strip()
+        invalid = dates.ne("") & pd.to_datetime(dates, format="%Y-%m-%d", errors="coerce").isna()
+        if invalid.any() or payments_edit[["committed", "paid"]].isna().any().any():
+            st.error("Enter valid dates as YYYY-MM-DD and fill in all amounts.")
+        else:
+            vendors = data.vendors.copy()
+            for col in ["committed", "paid", "next_payment"]:
+                vendors[col] = payments_edit[col].to_numpy()
+            vendors["next_payment"] = dates.to_numpy()
+            save_current_wedding(replace(data, vendors=vendors, paid=None))
+            st.rerun()
     st.subheader("Guest-count scenario")
     added = st.slider("Additional guests", 0, 50, 15)
     scenario = guest_count_scenario(data, added)
@@ -286,13 +304,13 @@ elif page == "Budget & payments":
         use_container_width=True,
         column_config={"Additional cost": st.column_config.NumberColumn(format="$%d")},
     )
-    st.subheader("Upcoming payments")
+    st.subheader("Upcoming payment dates")
     st.dataframe(
         upcoming_payments(data),
         hide_index=True,
         use_container_width=True,
         column_config={
-            "due": st.column_config.NumberColumn(format="$%d"),
+            "due": st.column_config.NumberColumn("Remaining balance", format="$%d"),
             "committed": st.column_config.NumberColumn(format="$%d"),
             "paid": st.column_config.NumberColumn(format="$%d"),
         },
@@ -302,33 +320,34 @@ elif page == "Vendors":
     st.markdown('<p class="eyebrow">VENDORS</p>', unsafe_allow_html=True)
     st.title("Compare the details before making a decision.")
     scores = vendor_scores(data)
+    st.caption("Add or edit vendors below. Scroll across for contact and comparison details; payment amounts can also be edited on Budget & payments.")
     vendors = st.data_editor(
-        data.vendors,
-        hide_index=True,
-        use_container_width=True,
-        num_rows="dynamic",
+        data.vendors, hide_index=True, use_container_width=True, num_rows="dynamic",
         column_config={
-            "quote": st.column_config.NumberColumn(format="$%d"),
-            "paid": st.column_config.NumberColumn(format="$%d"),
-            "committed": st.column_config.NumberColumn(format="$%d"),
-        },
-        key=f"vendors_{st.session_state.active_profile}",
+            "vendor": st.column_config.TextColumn("Vendor", required=True),
+            "category": st.column_config.TextColumn("Category", required=True),
+            "quote": st.column_config.NumberColumn("Quote ($)", min_value=0, required=True, format="$%.2f"),
+            "paid": st.column_config.NumberColumn("Paid ($)", min_value=0, required=True, format="$%.2f"),
+            "committed": st.column_config.NumberColumn("Committed ($)", min_value=0, required=True, format="$%.2f"),
+            "contract": st.column_config.SelectboxColumn("Contract", options=["Quote", "Signed", "Pending", "Not needed"], required=True),
+            "next_payment": st.column_config.TextColumn("Next payment (YYYY-MM-DD)"),
+            "rating": st.column_config.NumberColumn("Rating / 5", min_value=0.0, max_value=5.0, required=True),
+            "fit": st.column_config.NumberColumn("Fit / 5", min_value=0, max_value=5, required=True),
+            "contact": st.column_config.TextColumn("Contact"),
+        }, key=f"vendors_{st.session_state.active_profile}",
     )
-    if st.button("Save vendor changes"):
-        updated = WeddingData(
-            data.budget,
-            data.wedding_date,
-            vendors,
-            data.guests,
-            data.categories,
-            data.couple_name,
-            data.venue,
-            float(vendors.committed.sum()),
-            getattr(data, "expected_guests", None),
-            float(vendors.paid.sum()),
-        )
-        save_current_wedding(updated)
-        st.rerun()
+    if st.button("Save vendor changes", type="primary"):
+        required = ["vendor", "category", "quote", "paid", "committed", "contract", "rating", "fit"]
+        dates = vendors.next_payment.fillna("").astype(str).str.strip()
+        invalid_dates = dates.ne("") & pd.to_datetime(dates, format="%Y-%m-%d", errors="coerce").isna()
+        if vendors[required].isna().any().any() or vendors.vendor.fillna("").astype(str).str.strip().eq("").any() or vendors.category.fillna("").astype(str).str.strip().eq("").any() or invalid_dates.any():
+            st.error("Fill in the required fields and use YYYY-MM-DD for payment dates.")
+        else:
+            vendors = vendors.copy()
+            vendors["next_payment"] = dates
+            vendors["contact"] = vendors.contact.fillna("")
+            save_current_wedding(replace(data, vendors=vendors, paid=None))
+            st.rerun()
     st.subheader("Vendor comparison")
     st.dataframe(
         scores[
