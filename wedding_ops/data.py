@@ -273,7 +273,7 @@ def load_wedding(profile_name: str, directory: Path | None = None) -> WeddingDat
     return WeddingData(
         budget=float(payload["budget"]),
         wedding_date=date.fromisoformat(payload["wedding_date"]),
-        vendors=pd.DataFrame(payload["vendors"]),
+        vendors=pd.DataFrame(payload["vendors"], columns=["vendor", "category", "quote", "paid", "committed", "contract", "next_payment", "rating", "fit", "contact"]),
         guests=pd.DataFrame(payload["guests"]),
         categories=pd.DataFrame(payload["categories"]),
         couple_name=payload.get("couple_name", payload["profile_name"]),
