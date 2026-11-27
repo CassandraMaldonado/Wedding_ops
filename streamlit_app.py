@@ -9,10 +9,9 @@ import streamlit as st
 from wedding_ops.assistant import answer
 from wedding_ops.data import (
     WeddingData,
-    list_profiles,
-    load_wedding,
-    sample_wedding,
-    save_wedding,
+    blank_wedding,
+    load_account_wedding,
+    save_account_wedding,
 )
 from wedding_ops.planner import (
     attendance_forecast,
@@ -34,23 +33,28 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-profiles = list_profiles()
-if "active_profile" not in st.session_state:
-    st.session_state.active_profile = profiles[0] if profiles else "demo"
+if not st.user.is_logged_in:
+    st.title("Welcome to WeddingOps")
+    st.write("Sign in to open your wedding plan.")
+    st.button("Sign in with Google", on_click=st.login)
+    st.stop()
 
-if st.session_state.active_profile == "demo":
-    data = sample_wedding()
-else:
-    data = load_wedding(st.session_state.active_profile)
+subject = st.user.get("sub")
+if not subject:
+    st.error("Google did not provide an account identifier. Please sign in again.")
+    st.stop()
+try:
+    database_url = st.secrets["database"]["url"]
+    data = load_account_wedding(database_url, subject) or blank_wedding()
+except Exception:
+    st.error("The wedding database is unavailable. Check the database setup and connection in Streamlit secrets.")
+    st.stop()
+st.session_state.active_profile = subject
 budget = budget_summary(data)
 attendance = attendance_forecast(data.guests, getattr(data, "expected_guests", None))
 
 def save_current_wedding(updated_data: WeddingData) -> None:
-    if st.session_state.active_profile == "demo":
-        saved_profile = save_wedding(updated_data, "My wedding")
-        st.session_state.active_profile = saved_profile
-    else:
-        save_wedding(updated_data, st.session_state.active_profile)
+    save_account_wedding(database_url, subject, updated_data)
     st.success("Changes saved.")
 
 
@@ -58,16 +62,8 @@ with st.sidebar:
     st.markdown("# ✦ WeddingOps")
     st.caption("YOUR PLANNING COMMAND CENTER")
     st.divider()
-    profile_options = ["demo"] + [name for name in profiles if name != "demo"]
-    selected_profile = st.selectbox(
-        "Wedding profile",
-        profile_options,
-        index=profile_options.index(st.session_state.active_profile) if st.session_state.active_profile in profile_options else 0,
-        format_func=lambda name: "Demo wedding" if name == "demo" else name,
-    )
-    if selected_profile != st.session_state.active_profile:
-        st.session_state.active_profile = selected_profile
-        st.rerun()
+    st.caption(f"Signed in as {st.user.get('email', 'Google account')}")
+    st.button("Sign out", on_click=st.logout)
 
     with st.expander("Wedding details", expanded=False):
         couple_name = st.text_input(
@@ -126,31 +122,13 @@ with st.sidebar:
             ),
             key=f"expected_guests_{st.session_state.active_profile}",
         )
-        profile_name = st.text_input(
-            "Profile name",
-            value=""
-            if st.session_state.active_profile == "demo"
-            else st.session_state.active_profile,
-        )
         if st.button("Save wedding", use_container_width=True):
-            name = profile_name.strip() or couple_name.strip() or "My wedding"
-            saved_profile = save_wedding(
-                WeddingData(
-                    budget=float(wedding_budget),
-                    wedding_date=wedding_date,
-                    vendors=data.vendors,
-                    guests=data.guests,
-                    categories=data.categories,
-                    couple_name=couple_name.strip() or "My wedding",
-                    venue=venue.strip() or "Venue to be confirmed",
-                    committed=float(committed),
-                    expected_guests=int(expected_guests),
-                    paid=float(paid),
-                ),
-                name,
-            )
-            st.session_state.active_profile = saved_profile
-            st.success("Wedding details saved.")
+            save_current_wedding(replace(
+                data, budget=float(wedding_budget), wedding_date=wedding_date,
+                couple_name=couple_name.strip() or "Your wedding",
+                venue=venue.strip() or "Venue to be confirmed",
+                committed=float(committed), expected_guests=int(expected_guests), paid=float(paid),
+            ))
             st.rerun()
     st.divider()
     page = st.radio(
