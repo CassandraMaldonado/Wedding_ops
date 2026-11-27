@@ -35,3 +35,33 @@ streamlit run streamlit_app.py
 | `wedding_ops/assistant.py` | Provides grounded answers using the wedding data in the app. |
 | `streamlit_app.py` | The planning dashboard. |
 | `tests/test_planner.py` | Checks the budgeting, guest list, seating and assistant logic. |
+
+
+## Google sign-in and PostgreSQL setup
+
+Each Google account receives one private wedding plan, initially empty. Existing JSON profiles are not automatically imported; retain a backup before switching.
+
+Create the following table in your PostgreSQL database (the application database user needs SELECT, INSERT and UPDATE access):
+
+```sql
+CREATE TABLE wedding_accounts (
+    google_subject TEXT PRIMARY KEY,
+    payload JSONB NOT NULL
+);
+```
+
+Configure a Google OAuth web application as described in [Streamlit's Google sign-in guide](https://docs.streamlit.io/develop/tutorials/authentication/google). Add the deployed app URL followed by `/oauth2callback` as an authorized redirect URI. In Streamlit Community Cloud app settings, add the following secrets, replacing the placeholders. Never commit real credentials to GitHub.
+
+```toml
+[auth]
+redirect_uri = "https://YOUR-APP.streamlit.app/oauth2callback"
+cookie_secret = "a-long-random-secret"
+client_id = "your-google-client-id"
+client_secret = "your-google-client-secret"
+server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"
+
+[database]
+url = "postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require"
+```
+
+For local use, put these settings in `.streamlit/secrets.toml` and use the matching localhost redirect URI. Google OAuth must be published or have the intended users listed as test users. Database backups and security remain the responsibility of the database administrator.
