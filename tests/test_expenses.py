@@ -5,7 +5,7 @@ from wedding_ops.data import load_wedding, sample_wedding, save_wedding
 
 def test_expenses_survive_profile_round_trip_and_other_edits(tmp_path):
     data = sample_wedding()
-    expenses = pd.DataFrame([{"description": "Flowers", "category": "Floral", "budget": 1000.0, "actual": 1200.0, "paid": 300.0, "notes": "Deposit"}])
+    expenses = pd.DataFrame([{"description": "Flowers", "category": "Floral", "budget": 1000.0, "actual": 1200.0, "paid": 300.0, "due_by": "2027-02-01", "notes": "Deposit"}])
     profile = save_wedding(replace(data, expenses=expenses), "Our wedding", tmp_path)
     saved = load_wedding(profile, tmp_path)
     assert saved.expenses.to_dict("records") == expenses.to_dict("records")
