@@ -282,3 +282,53 @@ def load_wedding(profile_name: str, directory: Path | None = None) -> WeddingDat
         expected_guests=payload.get("expected_guests"),
         paid=payload.get("paid"),
     )
+
+
+def blank_wedding() -> WeddingData:
+    """Create an empty plan with the same editable columns as the sample."""
+    sample = sample_wedding()
+    return WeddingData(
+        0.0, date.today(), sample.vendors.iloc[:0].copy(),
+        sample.guests.iloc[:0].copy(), sample.categories.iloc[:0].copy(),
+        couple_name="Your wedding", venue="Venue to be confirmed",
+    )
+
+
+def load_account_wedding(database_url: str, subject: str) -> WeddingData | None:
+    import psycopg
+
+    with psycopg.connect(database_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT payload FROM wedding_accounts WHERE google_subject = %s", (subject,))
+            row = cur.fetchone()
+    if row is None:
+        return None
+    payload = row[0]
+    sample = sample_wedding()
+    return WeddingData(
+        budget=float(payload["budget"]), wedding_date=date.fromisoformat(payload["wedding_date"]),
+        vendors=pd.DataFrame(payload["vendors"], columns=sample.vendors.columns),
+        guests=pd.DataFrame(payload["guests"], columns=sample.guests.columns),
+        categories=pd.DataFrame(payload["categories"], columns=sample.categories.columns),
+        couple_name=payload.get("couple_name", "Your wedding"),
+        venue=payload.get("venue", "Venue to be confirmed"),
+        committed=payload.get("committed"), expected_guests=payload.get("expected_guests"),
+        paid=payload.get("paid"),
+    )
+
+
+def save_account_wedding(database_url: str, subject: str, data: WeddingData) -> None:
+    import psycopg
+    from psycopg.types.json import Jsonb
+
+    payload = {
+        "budget": data.budget, "wedding_date": data.wedding_date.isoformat(),
+        "vendors": data.vendors.to_dict(orient="records"),
+        "guests": data.guests.to_dict(orient="records"),
+        "categories": data.categories.to_dict(orient="records"),
+        "couple_name": data.couple_name, "venue": data.venue,
+        "committed": data.committed, "expected_guests": data.expected_guests, "paid": data.paid,
+    }
+    with psycopg.connect(database_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute("INSERT INTO wedding_accounts (google_subject, payload) VALUES (%s, %s) ON CONFLICT (google_subject) DO UPDATE SET payload = EXCLUDED.payload", (subject, Jsonb(payload)))
