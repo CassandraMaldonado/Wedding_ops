@@ -10,13 +10,13 @@ from pathlib import Path
 import pandas as pd
 
 
-EXPENSE_COLUMNS = ["description", "category", "budget", "actual", "paid", "notes"]
+EXPENSE_COLUMNS = ["description", "category", "budget", "actual", "paid", "due_by", "notes"]
 
 
 def empty_expenses() -> pd.DataFrame:
     return pd.DataFrame({"description": pd.Series(dtype="str"), "category": pd.Series(dtype="str"),
                          "budget": pd.Series(dtype="float64"), "actual": pd.Series(dtype="float64"),
-                         "paid": pd.Series(dtype="float64"), "notes": pd.Series(dtype="str")})
+                         "paid": pd.Series(dtype="float64"), "due_by": pd.Series(dtype="str"), "notes": pd.Series(dtype="str")})
 
 
 @dataclass(frozen=True)
@@ -292,5 +292,5 @@ def load_wedding(profile_name: str, directory: Path | None = None) -> WeddingDat
         committed=payload.get("committed"),
         expected_guests=payload.get("expected_guests"),
         paid=payload.get("paid"),
-        expenses=pd.DataFrame(payload["expenses"], columns=EXPENSE_COLUMNS) if payload.get("expenses") else empty_expenses(),
+        expenses=pd.DataFrame(payload["expenses"], columns=EXPENSE_COLUMNS).fillna({"due_by": "", "notes": ""}) if payload.get("expenses") else empty_expenses(),
     )
