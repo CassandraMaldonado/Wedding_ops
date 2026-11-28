@@ -3,11 +3,20 @@
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 
 import pandas as pd
+
+
+EXPENSE_COLUMNS = ["description", "category", "budget", "actual", "paid", "notes"]
+
+
+def empty_expenses() -> pd.DataFrame:
+    return pd.DataFrame({"description": pd.Series(dtype="str"), "category": pd.Series(dtype="str"),
+                         "budget": pd.Series(dtype="float64"), "actual": pd.Series(dtype="float64"),
+                         "paid": pd.Series(dtype="float64"), "notes": pd.Series(dtype="str")})
 
 
 @dataclass(frozen=True)
@@ -22,6 +31,7 @@ class WeddingData:
     committed: float | None = None
     expected_guests: int | None = None
     paid: float | None = None
+    expenses: pd.DataFrame = field(default_factory=empty_expenses)
 
 
 def sample_wedding() -> WeddingData:
@@ -260,6 +270,7 @@ def save_wedding(data: WeddingData, name: str, directory: Path | None = None) ->
         "vendors": data.vendors.to_dict(orient="records"),
         "guests": data.guests.to_dict(orient="records"),
         "categories": data.categories.to_dict(orient="records"),
+        "expenses": data.expenses.to_dict(orient="records"),
     }
     (folder / f"{profile_id}.json").write_text(
         json.dumps(payload, indent=2), encoding="utf-8"
@@ -281,4 +292,5 @@ def load_wedding(profile_name: str, directory: Path | None = None) -> WeddingDat
         committed=payload.get("committed"),
         expected_guests=payload.get("expected_guests"),
         paid=payload.get("paid"),
+        expenses=pd.DataFrame(payload["expenses"], columns=EXPENSE_COLUMNS) if payload.get("expenses") else empty_expenses(),
     )
