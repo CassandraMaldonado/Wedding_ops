@@ -1,6 +1,7 @@
 # Dashboard for WeddingOps.
 
 from dataclasses import replace
+from datetime import date
 
 import pandas as pd
 import plotly.express as px
@@ -135,7 +136,7 @@ with st.sidebar:
         if st.button("Save wedding", use_container_width=True):
             name = profile_name.strip() or couple_name.strip() or "My wedding"
             saved_profile = save_wedding(
-                WeddingData(
+                replace(data,
                     budget=float(wedding_budget),
                     wedding_date=wedding_date,
                     vendors=data.vendors,
@@ -245,26 +246,91 @@ if page == "Overview":
 
 elif page == "Budget & payments":
     st.markdown('<p class="eyebrow">BUDGET & PAYMENTS</p>', unsafe_allow_html=True)
-    st.title("See what is committed—and what is still flexible.")
-    st.caption("Edit the total budget and category amounts, then save. Committed amounts here are tracked by category.")
+    st.title("Wedding budget")
+    st.caption("A clear view of your expense budget, actual costs, and what remains.")
+    info1, info2, info3 = st.columns(3)
+    info1.metric("Venue", data.venue)
+    info2.metric("Wedding date", data.wedding_date.strftime("%b %d, %Y"))
+    days_left = (data.wedding_date - date.today()).days
+    info3.metric("Days until the wedding", max(days_left, 0) if days_left >= 0 else "Date passed")
     total_budget = st.number_input("Total wedding budget", min_value=0.0, value=float(data.budget), step=100.0, key=f"total_budget_{st.session_state.active_profile}")
-    categories = st.data_editor(
-        data.categories[["category", "planned", "committed"]],
-        hide_index=True, use_container_width=True, num_rows="dynamic",
-        column_config={
-            "category": st.column_config.TextColumn("Category", required=True),
-            "planned": st.column_config.NumberColumn("Planned ($)", min_value=0, required=True, format="$%.2f"),
-            "committed": st.column_config.NumberColumn("Committed ($)", min_value=0, required=True, format="$%.2f"),
-        }, key=f"categories_{st.session_state.active_profile}",
-    )
-    if st.button("Save budget changes", type="primary"):
-        if categories.empty or categories[["category", "planned", "committed"]].isna().any().any() or categories.category.astype(str).str.strip().eq("").any():
-            st.error("Add at least one category and fill in its name, planned amount, and committed amount.")
+    if st.button("Save total budget"):
+        save_current_wedding(replace(data, budget=float(total_budget)))
+        st.rerun()
+    expenses = data.expenses.copy()
+    total_actual = float(expenses.actual.sum())
+    total_paid = float(expenses.paid.sum())
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Total budget", f"${data.budget:,.2f}")
+    m2.metric("Actual cost", f"${total_actual:,.2f}")
+    m3.metric("Remaining budget", f"${data.budget - total_actual:,.2f}")
+    m4.metric("Paid", f"${total_paid:,.2f}")
+    st.caption("These figures use the expense list below. Vendor payments and the existing category budget are tracked separately; entries are not copied between them.")
+    left, right = st.columns([1, 1.2], gap="large")
+    with left:
+        st.subheader("Actual cost by category")
+        if expenses.empty or total_actual <= 0:
+            st.info("Add expenses with actual costs to see your breakdown.")
         else:
-            save_current_wedding(replace(data, budget=float(total_budget), categories=categories, committed=None))
+            breakdown = expenses.groupby("category", as_index=False)["actual"].sum()
+            breakdown = breakdown[breakdown.actual > 0]
+            fig = px.pie(breakdown, names="category", values="actual", hole=0.52,
+                         color_discrete_sequence=["#b38b32", "#1c1c1c", "#ddc784", "#7d642d", "#8a8a8a", "#e8dfc4", "#4b4537"])
+            fig.update_traces(textinfo="percent+label", hovertemplate="%{label}: $%{value:,.2f}<extra></extra>")
+            fig.update_layout(height=350, margin=dict(l=0, r=0, t=10, b=10), showlegend=False,
+                              paper_bgcolor="rgba(0,0,0,0)")
+            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    with right:
+        st.subheader("Category overview")
+        if expenses.empty:
+            st.info("Your category overview will appear when you add expenses.")
+        else:
+            overview = expenses.groupby("category", as_index=False)[["budget", "actual"]].sum()
+            overview["difference"] = overview.budget - overview.actual
+            st.dataframe(overview, hide_index=True, use_container_width=True,
+                         column_config={"category": "Category", "budget": st.column_config.NumberColumn("Budget", format="$%.2f"),
+                                        "actual": st.column_config.NumberColumn("Actual cost", format="$%.2f"),
+                                        "difference": st.column_config.NumberColumn("Difference", format="$%.2f")})
+            st.caption("Difference = budget minus actual cost. A negative amount is over budget.")
+    st.subheader("Wedding expenses")
+    st.caption("Add a row for each expense. Difference and outstanding amounts are calculated below after saving.")
+    edited = st.data_editor(expenses, hide_index=True, use_container_width=True, num_rows="dynamic",
+        column_config={
+            "description": st.column_config.TextColumn("Description", required=True),
+            "category": st.column_config.TextColumn("Category", required=True),
+            "budget": st.column_config.NumberColumn("Budget ($)", min_value=0.0, required=True, format="$%.2f"),
+            "actual": st.column_config.NumberColumn("Actual cost ($)", min_value=0.0, required=True, format="$%.2f"),
+            "paid": st.column_config.NumberColumn("Paid ($)", min_value=0.0, required=True, format="$%.2f"),
+            "notes": st.column_config.TextColumn("Notes"),
+        }, key=f"expenses_{st.session_state.active_profile}")
+    if st.button("Save expenses", type="primary"):
+        required = ["description", "category", "budget", "actual", "paid"]
+        if edited[required].isna().any().any() or any(edited[col].astype(str).str.strip().eq("").any() for col in ["description", "category"]):
+            st.error("Fill in the description, category, and amounts for each expense.")
+        else:
+            edited = edited.copy()
+            edited["notes"] = edited.notes.fillna("")
+            save_current_wedding(replace(data, expenses=edited))
             st.rerun()
-    st.caption("Still flexible by category = planned amount minus committed amount.")
-    st.dataframe(data.categories.assign(**{"Still flexible": data.categories.planned - data.categories.committed})[["category", "Still flexible"]], hide_index=True, use_container_width=True, column_config={"Still flexible": st.column_config.NumberColumn(format="$%.2f")})
+    if not expenses.empty:
+        st.dataframe(expenses.assign(difference=expenses.budget-expenses.actual,
+                                     outstanding=expenses.actual-expenses.paid)[["description", "category", "difference", "outstanding"]],
+                     hide_index=True, use_container_width=True,
+                     column_config={"difference": st.column_config.NumberColumn("Budget − actual", format="$%.2f"),
+                                    "outstanding": st.column_config.NumberColumn("Actual − paid", format="$%.2f")})
+    with st.expander("Edit existing category budget"):
+        st.caption("These category commitments are separate from the expense list above.")
+        categories = st.data_editor(data.categories[["category", "planned", "committed"]], hide_index=True, use_container_width=True, num_rows="dynamic",
+            column_config={"category": st.column_config.TextColumn("Category", required=True),
+                           "planned": st.column_config.NumberColumn("Planned ($)", min_value=0, required=True, format="$%.2f"),
+                           "committed": st.column_config.NumberColumn("Committed ($)", min_value=0, required=True, format="$%.2f")},
+            key=f"categories_{st.session_state.active_profile}")
+        if st.button("Save category budget"):
+            if categories.empty or categories[["category", "planned", "committed"]].isna().any().any() or categories.category.astype(str).str.strip().eq("").any():
+                st.error("Add at least one category and fill in all fields.")
+            else:
+                save_current_wedding(replace(data, categories=categories, committed=None))
+                st.rerun()
     st.subheader("Payments")
     st.caption("Update amounts paid and the next payment date here. Remaining balance is the total committed minus paid; it is not necessarily the amount due on that date.")
     payments_edit = st.data_editor(
@@ -417,18 +483,7 @@ elif page == "Guests & seating":
         key=f"guests_{st.session_state.active_profile}",
     )
     if st.button("Save guest changes"):
-        updated = WeddingData(
-            data.budget,
-            data.wedding_date,
-            data.vendors,
-            guests,
-            data.categories,
-            data.couple_name,
-            data.venue,
-            getattr(data, "committed", None),
-            getattr(data, "expected_guests", None),
-            getattr(data, "paid", None),
-        )
+        updated = replace(data, guests=guests)
         save_current_wedding(updated)
         st.rerun()
     st.subheader("Suggested seating plan")
