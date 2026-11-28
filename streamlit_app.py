@@ -319,7 +319,6 @@ elif page == "Budget & payments":
 elif page == "Vendors":
     st.markdown('<p class="eyebrow">VENDORS</p>', unsafe_allow_html=True)
     st.title("Compare the details before making a decision.")
-    scores = vendor_scores(data)
     st.caption("Add or edit vendors below. Scroll across for contact and comparison details; payment amounts can also be edited on Budget & payments.")
     vendors = st.data_editor(
         data.vendors, hide_index=True, use_container_width=True, num_rows="dynamic",
@@ -349,35 +348,57 @@ elif page == "Vendors":
             save_current_wedding(replace(data, vendors=vendors, paid=None))
             st.rerun()
     st.subheader("Vendor comparison")
-    st.dataframe(
-        scores[
-            [
-                "vendor",
-                "category",
-                "quote",
-                "paid",
-                "committed",
-                "contract_status",
-                "next_payment",
-                "rating",
-                "fit",
-                "value_score",
-            ]
-        ],
-        hide_index=True,
-        use_container_width=True,
-        column_config={
-            "quote": st.column_config.NumberColumn(format="$%d"),
-            "paid": st.column_config.NumberColumn(format="$%d"),
-            "committed": st.column_config.NumberColumn(format="$%d"),
-            "value_score": st.column_config.ProgressColumn(
-                "Value score", format="%.0f", min_value=0, max_value=100
-            ),
-        },
-    )
-    st.caption(
-        "The value score is a simple comparison tool based on price, rating, and fit. It is meant to support—not replace—your own judgment about the vendor."
-    )
+    st.caption("Compare vendors in the same category. Save edits above to refresh the comparison.")
+    if data.vendors.empty:
+        st.info("Add and save a vendor above to start comparing.")
+    else:
+        category_options = sorted(data.vendors.category.dropna().astype(str).unique())
+        selected_category = st.selectbox("Compare category", category_options, key=f"comparison_category_{st.session_state.active_profile}")
+        comparison = data.vendors[data.vendors.category.astype(str) == selected_category].copy()
+        comparison = comparison.sort_values("quote", kind="stable")
+        if len(comparison) == 1:
+            st.info("Add another vendor in this category to compare options side by side.")
+        chart = px.bar(
+            comparison, x="quote", y="vendor", orientation="h",
+            labels={"quote": "Quote ($)", "vendor": ""},
+            color_discrete_sequence=["#b38b32"],
+            hover_data={"category": False, "quote": ":$,.2f"},
+        )
+        chart.update_layout(
+            height=max(210, 80 + len(comparison) * 52),
+            margin={"l": 0, "r": 15, "t": 10, "b": 0},
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            xaxis_tickprefix="$", yaxis_autorange="reversed", showlegend=False,
+        )
+        st.plotly_chart(chart, use_container_width=True, config={"displayModeBar": False})
+        st.caption("Quotes are estimates. Committed amounts and payments are shown separately below.")
+        for start in range(0, len(comparison), 3):
+            row = comparison.iloc[start:start + 3]
+            columns = st.columns(3)
+            for column, (_, vendor) in zip(columns, row.iterrows()):
+                with column:
+                    with st.container(border=True):
+                        st.markdown("#### " + str(vendor["vendor"]))
+                        st.caption(str(vendor["contract"]))
+                        st.metric("Quote", f"${vendor['quote']:,.2f}")
+                        st.write(f"**Rating:** {vendor['rating']:g} / 5  ·  **Fit:** {vendor['fit']:g} / 5")
+                        st.write(f"**Committed:** ${vendor['committed']:,.2f}")
+                        st.write(f"**Paid:** ${vendor['paid']:,.2f}")
+                        balance = vendor['committed'] - vendor['paid']
+                        st.write(f"**Remaining balance:** ${balance:,.2f}")
+                        if vendor['committed'] > 0:
+                            progress = min(max(float(vendor['paid'] / vendor['committed']), 0.0), 1.0)
+                            st.progress(progress, text=f"{vendor['paid'] / vendor['committed']:.0%} of commitment paid")
+                        else:
+                            st.caption("No committed amount yet")
+                        payment_date = str(vendor.get("next_payment") or "").strip()
+                        st.caption(f"Next payment: {payment_date or 'Not set'}")
+        with st.expander("View comparison table"):
+            st.dataframe(
+                comparison[["vendor", "category", "quote", "paid", "committed", "contract", "next_payment", "rating", "fit", "contact"]],
+                hide_index=True, use_container_width=True,
+                column_config={name: st.column_config.NumberColumn(format="$%.2f") for name in ["quote", "paid", "committed"]},
+            )
 
 elif page == "Guests & seating":
     st.markdown('<p class="eyebrow">GUESTS & SEATING</p>', unsafe_allow_html=True)
